@@ -20,7 +20,12 @@ def main() -> int:
     p = argparse.ArgumentParser()
     p.add_argument("origin")
     p.add_argument("local")
-    p.add_argument("--width", type=int, default=390)
+    p.add_argument(
+        "--width",
+        type=int,
+        default=390,
+        help="clip both images to this width (390 mobile, 1440 desktop)",
+    )
     p.add_argument("--crop", type=parse_crop, help="x,y,x2,y2")
     p.add_argument("--diff", type=Path, help="write difference PNG")
     args = p.parse_args()

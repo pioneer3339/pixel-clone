@@ -2,7 +2,26 @@
 
 SKILL.md의 루프에서 쓰는 evaluate / MAE 조각. 페이지마다 새로 짜지 않는다.
 
-뷰포트 숫자는 프로젝트 합의값으로 바꾼다. 아래는 390 × 844 예.
+뷰포트 숫자는 프로젝트 합의값으로 바꾼다. 아래는 mobile 390 × 844 / desktop 1440 × 900.
+
+측정 전 반드시 `innerWidth`가 목표 폭인지 확인한다.
+
+원본 브레이크포인트 찾기:
+
+```js
+(() => {
+  const bps = new Set();
+  for (const sheet of document.styleSheets) {
+    let rules; try { rules = sheet.cssRules; } catch { continue; }
+    for (const rule of rules) {
+      if (rule.conditionText) bps.add(rule.conditionText);
+    }
+  }
+  return JSON.stringify({ innerWidth, innerHeight, media: [...bps] });
+})()
+```
+
+desktop 폭은 잡힌 `min-width` 이상으로 고른다.
 
 ## 소음 제거
 
@@ -126,21 +145,25 @@ document.elementsFromPoint(348, 22).map(el => ({
 
 ## 캡처 MAE
 
-CDP `Page.captureScreenshot` clip `{ x:0, y:0, width:390, height:844, scale:1 }` 후:
+CDP `Page.captureScreenshot` clip은 **그 뷰포트 크기**로 한다.
+mobile `{ x:0, y:0, width:390, height:844, scale:1 }`
+desktop `{ x:0, y:0, width:1440, height:900, scale:1 }`
 
 ```bash
-python scripts/mae.py origin.png local.png
-python scripts/mae.py origin.png local.png --crop 0,540,390,844
+python scripts/mae.py origin.png local.png --width 390
+python scripts/mae.py origin.png local.png --width 1440
+python scripts/mae.py origin.png local.png --width 390 --crop 0,540,390,844
 ```
 
 Pillow 직접:
 
 ```python
 from PIL import Image, ImageChops, ImageStat
+W = 390  # or 1440
 A = Image.open(origin).convert('RGB')
 B = Image.open(local).convert('RGB')
 h = min(A.height, B.height)
-w = min(A.width, B.width, 390)
+w = min(A.width, B.width, W)
 d = ImageChops.difference(A.crop((0, 0, w, h)), B.crop((0, 0, w, h)))
 mae = sum(ImageStat.Stat(d).mean) / 3
 hist = d.convert('L').histogram()
