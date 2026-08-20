@@ -1,31 +1,83 @@
 ---
 name: pixel-clone
-description: Clones a live website into a local app by measuring the original DOM (getBoundingClientRect + getComputedStyle) at one or more fixed viewports (mobile and/or desktop) and copying those numbers into CSS/markup. Orchestrates a page×viewport parent/worker loop without claiming one-shot site completion. Use when the user asks for a 1:1 clone, pixel replica, 원본 복제, 픽셀 복제, 데스크톱도, 반응형 복제, 화면 똑같이, 팀모드, 루프 엔지니어링, or to stop guessing CSS from screenshots.
+description: Loop-engineers a live-site clone from a reference URL. After opening the link, inspects the origin then asks the user what to clone (pages, mobile/desktop widths, out-of-scope) before any measure/CSS loop. Measures DOM (getBoundingClientRect + getComputedStyle) at agreed viewports and copies those numbers into CSS/markup. Parent/worker page×viewport loop; never claims one-shot site completion. Use when the user pastes a reference URL or asks for a 1:1 clone, pixel replica, 원본 복제, 픽셀 복제, 레퍼런스, 데스크톱도, 반응형 복제, 화면 똑같이, 팀모드, 루프 엔지니어링, or to stop guessing CSS from screenshots.
 ---
 
-# Pixel Clone — 원본 DOM 실측 복제
+# Pixel Clone — 원본 DOM 실측 루프
 
 스크린샷을 보고 CSS를 감으로 맞추지 않는다.
 원본을 자로 잰 뒤 **그 숫자를 그대로** 로컬에 박고, 같은 자로 다시 잰다.
 
+이건 한 방에 사이트를 만드는 스킬이 아니다. **레퍼런스 URL을 받은 뒤, 원본을 보고, 사용자가 원하는 범위를 확정한 다음**, 페이지×폭 단위로 도는 루프 엔지니어링이다.
+
 온브릭스에서 검증한 루프. 사이트는 달라도 순서는 같다.
-사이트별 상수·완료 페이지는 그 프로젝트의 `CONTEXT.md` / `METHOD.md`를 읽는다. 이 스킬은 **방법**만 강제한다.
+사이트별 합의·완료 키는 그 프로젝트의 `CONTEXT.md` / `METHOD.md`에 둔다. 이 스킬은 **방법**만 강제한다.
 
 법적 전제: 개인 학습·비공개. 원본 이미지·폰트·상표를 외부 배포하지 않는다. 결제/로그인은 데모만.
 
 ## 한 줄
 
 ```
-원본 뷰포트 고정 → 팝업/애니메이션 제거 → rect+computed 추출
-→ 숫자 그대로 CSS/마크업/JSON → 로컬 같은 스크립트 재측정
-→ 틀린 숫자만 고침 → 픽셀 diff는 확인용
+레퍼런스 URL → 원본 훑기 → 사용자에게 범위 확인
+→ 합의된 폭만 고정 → 팝업 제거 → rect+computed
+→ 숫자 그대로 CSS/마크업 → 로컬 같은 자로 재측정
+→ 틀린 숫자만 고침 → 한 바퀴 보고 후 정지
 ```
 
 근거는 항상 evaluate 숫자다. 스크린샷은 확인용이다.
+합의 전에는 마크업·CSS·워커를 시작하지 않는다.
 
-## 시작 전에 고정할 것
+## 0. 레퍼런스 먼저 — 구현은 그 다음
 
-사용자와 한 번만 정한다. 안 정하면 모든 좌표가 가짜다.
+사용자가 링크를 주기 전에 뷰포트·스택·페이지 목록을 추측하지 않는다.
+링크가 없으면 **원본 URL부터** 받는다. 링크가 있어도 아래를 건너뛰고 코딩하지 않는다.
+
+이미 답이 온 항목은 다시 묻지 않는다. 원본을 본 뒤에야 의미가 있는 질문만 한다.
+
+### 0-A. 원본 훑기 (짧게, 파일 수정 없음)
+
+1. 받은 URL로 이동. 이 단계에서는 아직 합의 폭이 없다. `innerWidth`와 내비만 본다.
+2. 팝업·채널톡이 가리면 끄고, 내비/푸터 링크로 경로 후보를 뽑는다.
+3. 스타일시트에서 `min-width` / `max-width`를 읽는다. 데스크톱 CSS가 있는지 확인한다.
+4. 한 번 좁히고(≈390) 한 번 넓혀(원본 `min-width` 이상) **레이아웃이 갈라지는지**만 본다. 좌표 표는 아직 만들지 않는다.
+5. 로그인 벽, 실시간 상품, GIF, 채팅 위젯, 결제 진입을 표시한다.
+
+### 0-B. 관측을 먼저 보여 준다
+
+구현 제안보다 **본 것**을 짧게 보고한다.
+
+```
+원본: {url}
+종류: {랜딩 / 커머스 / 앱셸 / 문서 …}
+경로 후보: {내비에서 읽은 경로 5~15개}
+브레이크포인트: {시트에서 읽은 min-width 목록}
+폭에 따라 갈라짐: {하단내비↔사이드바 등, 있/없음}
+동적: {GIF, 실시간 카탈로그, 채널톡, 로그인 벽}
+```
+
+### 0-C. 그다음에 묻는다
+
+관측을 근거로, 한 턴에 **2~3개**만. 설문지를 한꺼번에 던지지 않는다.
+
+아직 모르는 것만:
+
+| 확정할 것 | 왜 원본을 본 뒤에 묻나 |
+|---|---|
+| 이번 라운드 페이지 | 내비에 있는 전부인지, 지금 URL만인지, 사용자가 고를지 |
+| 폭 | 모바일이 기본. 원본이 데스크톱에서 갈라지면 그 사실을 말하고 데스크톱도 할지 묻는다 |
+| 범위 밖 | 결제·실API·로그인·채팅·실시간 카탈로그를 복제할지, 껍데기만인지 |
+| 로컬 | 기존 프로젝트에 붙일지, 새로 만들지, 포트 |
+| 완료 | 페이지@폭 좌표 LOCK인지, 픽셀 0인지. 기본은 LOCK이지 픽셀 0이 아니다 |
+
+금지: 사용자가 “이 링크 복제”만 했다고 전 페이지·양 폭·풀스택을 큐에 넣기.
+금지: 훑기 전에 “모바일로 갈까요?”처럼 공허한 질문.
+
+사용자가 한 줄로 범위를 이미 적었으면 0-B만 맞는지 확인하고 바로 합의로 간다.
+
+### 0-D. 합의되면 그때 상수를 박는다
+
+답이 모이면 `CONTEXT.md`에 URL 쌍, 뷰포트 목록, 범위 밖, 큐 키를 쓴다.
+**이 시점부터** 아래 실측 루프와 팀 루프가 열린다.
 
 | 항목 | 기본 | 다른 사이트 |
 |---|---|---|
@@ -114,6 +166,7 @@ desktop이면 `--width 1440`. 390 캡처와 1440 캡처를 겹쳐 비교하지 �
 
 ## 금지
 
+- 레퍼런스를 안 보고, 또는 범위 합의 전에 마크업/CSS/워커 시작
 - 스크린샷 옆에 두고 “헤더가 조금 크다”로 CSS 때리기
 - “이 카드는 대충 170” 반올림
 - 높이만 맞고 완료
@@ -165,12 +218,13 @@ MAE를 다시 찍을 때는 **양쪽 GIF·에디터·타이머를 정지한 뒤*
 
 ## 팀 루프 (메인이 돌림)
 
+섹션 0 합의 전에도 워커를 돌리지 않는다.
 사용자가 “전체 돌려”, “팀모드”, “루프로 완성”이면 이 섹션 + [team-loop.md](team-loop.md).
-**사이트 원샷 완성을 약속하지 않는다.** 한 바퀴는 “잠긴 페이지가 늘고, 실패 페이지만 남는다”이다.
+**사이트 원샷 완성을 약속하지 않는다.** 한 바퀴는 “잠긴 키가 늘고, 실패 키만 남는다”이다.
 
 ### 메인만 한다
 
-1. `CONTEXT.md`가 있으면 페이지 표(원본 URL ↔ 로컬 경로, 잠금 여부, 뷰포트)를 읽는다. 없으면 원본 내비로 목록을 만든다.
+1. `CONTEXT.md`의 합의 표를 읽는다. 없으면 섹션 0부터다. 워커를 먼저 돌리지 않는다.
 2. 큐 키는 `페이지@폭`이다. `login@390` LOCK이 `login@1440` LOCK이 아니다.
 3. 잠긴 **페이지@폭**은 큐에 넣지 않는다.
 4. 워커에게 **페이지 하나, 폭 하나, 원본 URL, 로컬 URL, 만져도 되는 파일**만 준다.
